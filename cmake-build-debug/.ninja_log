@@ -1,0 +1,5 @@
+# ninja log v5
+372	404	1708039028455231781	bet_calculator	ff74ad2515ae7421
+1	372	1708039028421851326	CMakeFiles/bet_calculator.dir/main.cpp.o	16bd412a0cfaf36b
+1	491	1708039205594048477	CMakeFiles/bet_calculator.dir/main.cpp.o	266dbe56513c39ee
+491	530	1708039205636215225	bet_calculator	ff74ad2515ae7421
