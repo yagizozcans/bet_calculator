@@ -3,10 +3,12 @@
 #include <vector>
 #include <SFML/Graphics.hpp>
 #include <string>
+#include <cmath>
 
 class Bets
 {
 public:
+    int id;
     float rate;
     float percentage;
 };
@@ -25,6 +27,25 @@ public:
     }
 };
 
+class s_line_data
+{
+public:
+    std::vector<sf::RectangleShape> lines;
+    s_line_data(float lineWidth,float lineThickness,sf::Color lineColor)
+            : s_lineWidth(lineWidth),lineColor(lineColor),lineThickness(lineThickness)
+    {
+    }
+    float s_lineWidth;
+    int lineOrder = 0;
+    float currentYValue = 0;
+    float lineThickness = 0;
+    sf::Color lineColor;
+    void addLine(sf::RectangleShape line)
+    {
+        lines.push_back(line);
+    }
+};
+
 int main(int argc, char * argv[]) {
     std::cout << "Hello, World!" << std::endl;
     sf::RenderWindow window(sf::VideoMode(800,600),"bet");
@@ -34,10 +55,11 @@ int main(int argc, char * argv[]) {
 
     float aspectRatio = window.getSize().x / window.getSize().y;
 
+    s_line_data lineData(2,1,sf::Color::White);
+
     std::vector<Bets> bets;
     std::vector<Text> texts;
     std::ifstream fin("bets.txt");
-
     float token = 0;
     int i = 0;
 
@@ -47,6 +69,7 @@ int main(int argc, char * argv[]) {
         nBet.rate = token;
         fin>>token;
         nBet.percentage = token;
+        nBet.id = i;
         bets.push_back(nBet);
         i++;
     }
@@ -57,15 +80,44 @@ int main(int argc, char * argv[]) {
     sf::Font font;
     font.loadFromFile("arial.ttf");
 
+    float lastYValue = 0;
+    float totalPercentage = 0;
+    float maxWin = 0;
+    float totalWin = 0;
     for(auto& e : bets)
     {
+        Text betTxt;
+        betTxt.SetText(100*e.percentage,e.rate,font);
+        texts.push_back(betTxt);
+        averageTotalWin += e.rate * e.percentage;
+        totalWin += e.rate;
+        total++;
         for(auto& b : bets)
         {
-            averageTotalWin += e.rate * b.rate * e.percentage * b.percentage;
-            total++;
-            Text txt;
-            txt.SetText(e.rate * b.rate * e.percentage * b.percentage,e.rate*b.rate,font);
-            texts.push_back(txt);
+            if(e.id != b.id && e.id < b.id)
+            {
+                averageTotalWin += e.rate * b.rate * e.percentage * b.percentage;
+                totalWin += e.rate + b.rate;
+                if(maxWin < e.rate * b.rate)
+                {
+                    maxWin = e.rate * b.rate;
+                }
+                Text txt;
+                txt.SetText(100*e.percentage * b.percentage,e.rate*b.rate,font);
+                texts.push_back(txt);
+                float lastYValue = lineData.currentYValue;
+                float betM = e.rate * b.rate * e.percentage * b.percentage;
+                lineData.currentYValue -= betM;
+                float degree = atanf(betM / lineData.s_lineWidth) * 180 / M_PI;
+                sf::RectangleShape line(sf::Vector2f(sqrt(betM*betM + lineData.s_lineWidth*lineData.s_lineWidth),lineData.lineThickness));
+                line.setPosition(sf::Vector2f(lineData.lineOrder * lineData.s_lineWidth,600 - lineData.lineThickness * 3 + lastYValue));
+                line.rotate(-degree);
+                line.setFillColor(lineData.lineColor);
+                lineData.addLine(line);
+                lineData.lineOrder++;
+                lastYValue = lineData.currentYValue;
+                total++;
+            }
         }
     }
 
@@ -113,13 +165,16 @@ int main(int argc, char * argv[]) {
                 window.draw(t.text);
                 k++;
             }
+            for(auto& line : lineData.lines)
+            {
+                window.draw(line);
+            }
             sf::Text text;
-            float totalGain = averageTotalWin * total;
             text.setCharacterSize(24);
             text.setString("Total bet -> " + std::to_string(total)
-                           +"\n""Average total win -> " + std::to_string(totalGain)
-                           +"\n"+"Percentage of bet -> " + std::to_string(averageTotalWin)
-                           +"\n" + "Gain per one bet -> " + std::to_string((totalGain - total)/total));
+                           +"\n""Average total win -> " + std::to_string(averageTotalWin)
+                           +"\n""Total win -> " + std::to_string(totalWin)
+                           +"\n" + "Max win  -> " + std::to_string(maxWin));
             text.setPosition(0,k*24 + 24);
             text.setFont(font);
             text.setFillColor(sf::Color::White);
